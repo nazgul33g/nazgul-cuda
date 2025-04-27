@@ -17,6 +17,50 @@ A lot of gratitude to all the developers whose codes has been used here.
 - For XPoint[s] mode use x point of the public key, without 02 or 03 prefix(64 chars).
 - Cuda only.
 
+# Dependencies
+Your Linux computer must have installed:
+
+- Python 3 and pip:
+```
+sudo apt install -y python3 python3-pip
+```
+
+- base58 library for Python scripts:
+```
+pip3 install base58 --break-system-packages
+```
+
+- GNU Make and G++ compiler:
+```
+sudo apt install -y build-essential
+```
+
+- GMP library for multiprecision arithmetic:
+```
+sudo apt install -y libgmp-dev
+```
+
+- CUDA Toolkit 12.8 (or compatible with your GPU):
+- Follow instructions from NVIDIA CUDA Toolkit site for your specific distribution.
+- Basic steps for Ubuntu 24.04:
+```
+wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-ubuntu2404.pin
+sudo mv cuda-ubuntu2404.pin /etc/apt/preferences.d/cuda-repository-pin-600
+wget https://developer.download.nvidia.com/compute/cuda/12.8.1/local_installers/cuda-repo-ubuntu2404-12-8-local_12.8.1-570.124.06-1_amd64.deb
+sudo dpkg -i cuda-repo-ubuntu2404-12-8-local_12.8.1-570.124.06-1_amd64.deb
+sudo cp /var/cuda-repo-ubuntu2404-12-8-local/cuda-*-keyring.gpg /usr/share/keyrings/
+sudo apt-get update
+sudo apt-get -y install cuda-toolkit-12-8
+```
+
+⚡ Important:
+- Make sure your system PATH includes CUDA binaries. Example:
+```
+echo 'export PATH=/usr/local/cuda-12.8/bin:$PATH' >> ~/.bashrc
+echo 'export LD_LIBRARY_PATH=/usr/local/cuda-12.8/lib64:$LD_LIBRARY_PATH' >> ~/.bashrc
+source ~/.bashrc
+```
+
 # Usage
 - For multiple addresses or xpoints, file format must be binary with sorted data.
 - To convert Bitcoin addresses list(text format) to rmd160 hashes binary file use provided python script ```addresses_to_hash160.py```
