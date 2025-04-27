@@ -485,17 +485,27 @@ void sha256_65(unsigned char *input, unsigned char *digest)
 
 }
 
-void sha256_checksum(uint8_t *input, int length, uint8_t *checksum)
+// void sha256_checksum(uint8_t *input, int length, uint8_t *checksum)
+// { //Something is wrong with this first version of the function, but im not able to find the mistake yet
+//     uint32_t s[8];
+//     uint8_t b[64];
+//     memcpy(b, input, length);
+//     memcpy(b + length, _sha256::pad, 56 - length);
+//     WRITEBE64(b + 56, length << 3);
+//     _sha256::Transform2(s, b);
+//     WRITEBE32(checksum, s[0]);
+// }
+
+void sha256_checksum(uint8_t* input, int length, uint8_t* checksum)
 {
+    uint8_t hash1[32];
+    uint8_t hash2[32];
 
-    uint32_t s[8];
-    uint8_t b[64];
-    memcpy(b, input, length);
-    memcpy(b + length, _sha256::pad, 56 - length);
-    WRITEBE64(b + 56, length << 3);
-    _sha256::Transform2(s, b);
-    WRITEBE32(checksum, s[0]);
+    sha256(input, length, hash1);
 
+    sha256(hash1, 32, hash2);
+
+    memcpy(checksum, hash2, 4);
 }
 
 std::string sha256_hex(unsigned char *digest)

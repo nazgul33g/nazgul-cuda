@@ -11,16 +11,19 @@
 #include <algorithm>
 #include <iostream>
 #include <cassert>
+#include <unordered_set>
 #ifndef WIN64
 #include <pthread.h>
 #endif
+
+static std::unordered_set<std::string> alreadyFoundAddrs;
 
 //using namespace std;
 
 Point Gn[CPU_GRP_SIZE / 2];
 Point _2Gn;
 
-// ----------------------------------------------------------------------------
+//----------------------------------------------------------------------------
 
 KeyHunt::KeyHunt(const std::string& inputFile, int compMode, int searchMode, int coinType, bool useGpu,
 	const std::string& outputFile, bool useSSE, uint32_t maxFound, uint64_t rKey,
@@ -75,7 +78,7 @@ KeyHunt::KeyHunt(const std::string& inputFile, int compMode, int searchMode, int
 
 	uint8_t* buf = (uint8_t*)malloc(K_LENGTH);;
 
-	bloom = new Bloom(2 * N, 0.000001);
+	bloom = new Bloom(2 * N, 0.000000000001);
 
 	uint64_t percent = (N - 1) / 100;
 	uint64_t i = 0;
@@ -231,10 +234,15 @@ void KeyHunt::output(std::string addr, std::string pAddr, std::string pAddrHex, 
 	if (outputFile.length() > 0) {
 		f = fopen(outputFile.c_str(), "a");
 		if (f == NULL) {
-			printf("Cannot open %s for writing\n", outputFile.c_str());
-			f = stdout;
-		}
-		else {
+			// Try to open to append and fails, now we force to create the file
+			f = fopen(outputFile.c_str(), "w+");
+			if (f == NULL) {
+				printf("Cannot create %s for writing\n", outputFile.c_str());
+				f = stdout;
+			} else {
+				needToClose = true;
+			}
+		} else {
 			needToClose = true;
 		}
 	}
@@ -243,22 +251,22 @@ void KeyHunt::output(std::string addr, std::string pAddr, std::string pAddrHex, 
 		printf("\n");
 
 	fprintf(f, "PubAddress: %s\n", addr.c_str());
-	fprintf(stdout, "\n=================================================================================\n");
+	//fprintf(stdout, "\n=================================================================================\n");
 	fprintf(stdout, "PubAddress: %s\n", addr.c_str());
 
 	if (coinType == COIN_BTC) {
-		fprintf(f, "Priv (WIF): p2pkh:%s\n", pAddr.c_str());
-		fprintf(stdout, "Priv (WIF): p2pkh:%s\n", pAddr.c_str());
+		//fprintf(f, "Priv (WIF): p2pkh:%s\n", pAddr.c_str());
+		//fprintf(stdout, "Priv (WIF): p2pkh:%s\n", pAddr.c_str());
 	}
 
-	fprintf(f, "Priv (HEX): %s\n", pAddrHex.c_str());
-	fprintf(stdout, "Priv (HEX): %s\n", pAddrHex.c_str());
+	//fprintf(f, "Priv (HEX): %s\n", pAddrHex.c_str());
+	//fprintf(stdout, "Priv (HEX): %s\n", pAddrHex.c_str());
 
-	fprintf(f, "PubK (HEX): %s\n", pubKey.c_str());
-	fprintf(stdout, "PubK (HEX): %s\n", pubKey.c_str());
+	//fprintf(f, "PubK (HEX): %s\n", pubKey.c_str());
+	//fprintf(stdout, "PubK (HEX): %s\n", pubKey.c_str());
 
-	fprintf(f, "=================================================================================\n");
-	fprintf(stdout, "=================================================================================\n");
+	//fprintf(f, "=================================================================================\n");
+	//fprintf(stdout, "=================================================================================\n");
 
 	if (needToClose)
 		fclose(f);
@@ -275,34 +283,43 @@ void KeyHunt::output(std::string addr, std::string pAddr, std::string pAddrHex, 
 
 bool KeyHunt::checkPrivKey(std::string addr, Int& key, int32_t incr, bool mode)
 {
-	Int k(&key), k2(&key);
-	k.Add((uint64_t)incr);
-	k2.Add((uint64_t)incr);
-	// Check addresses
-	Point p = secp->ComputePublicKey(&k);
-	std::string px = p.x.GetBase16();
-	std::string chkAddr = secp->GetAddress(mode, p);
-	if (chkAddr != addr) {
-		//Key may be the opposite one (negative zero or compressed key)
-		k.Neg();
-		k.Add(&secp->order);
-		p = secp->ComputePublicKey(&k);
-		std::string chkAddr = secp->GetAddress(mode, p);
-		if (chkAddr != addr) {
-			printf("\n=================================================================================\n");
-			printf("Warning, wrong private key generated !\n");
-			printf("  PivK :%s\n", k2.GetBase16().c_str());
-			printf("  Addr :%s\n", addr.c_str());
-			printf("  PubX :%s\n", px.c_str());
-			printf("  PivK :%s\n", k.GetBase16().c_str());
-			printf("  Check:%s\n", chkAddr.c_str());
-			printf("  PubX :%s\n", p.x.GetBase16().c_str());
-			printf("=================================================================================\n");
-			return false;
-		}
-	}
-	output(addr, secp->GetPrivAddress(mode, k), k.GetBase16(), secp->GetPublicKeyHex(mode, p));
-	return true;
+    Int k(&key), k2(&key);
+    k.Add((uint64_t)incr);
+    k2.Add((uint64_t)incr);
+
+    Point p = secp->ComputePublicKey(&k);
+    std::string px = p.x.GetBase16();
+    std::string chkAddr = secp->GetAddress(mode, p);
+
+    if (chkAddr != addr) {
+        //Key may be the opposite one (negative zero or compressed key)
+        k.Neg();
+        k.Add(&secp->order);
+        p = secp->ComputePublicKey(&k);
+        std::string chkAddr = secp->GetAddress(mode, p);
+        if (chkAddr != addr) {
+            return false;
+        }
+    }
+
+    if (alreadyFoundAddrs.find(addr) != alreadyFoundAddrs.end()) {
+        return false;
+    }
+
+    printf("\n=================================================================================\n");
+    printf("  FOUND NEW ADDRESS!\n");
+    printf("  PivK :%s\n", k2.GetBase16().c_str());
+    printf("  Addr :%s\n", addr.c_str());
+    printf("  PubX :%s\n", px.c_str());
+    printf("  PivK :%s\n", k.GetBase16().c_str());
+    printf("  Check:%s\n", chkAddr.c_str());
+    printf("  PubX :%s\n", p.x.GetBase16().c_str());
+    printf("=================================================================================\n");
+
+    output(addr, secp->GetPrivAddress(mode, k), k.GetBase16(), secp->GetPublicKeyHex(mode, p));
+
+    alreadyFoundAddrs.insert(addr);
+    return true;
 }
 
 bool KeyHunt::checkPrivKeyETH(std::string addr, Int& key, int32_t incr)

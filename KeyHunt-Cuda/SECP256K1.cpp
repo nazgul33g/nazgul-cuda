@@ -733,17 +733,16 @@ std::string Secp256K1::GetAddressETH(unsigned char* hash)
 
 std::string Secp256K1::GetAddress(bool compressed, Point& pubKey)
 {
+    unsigned char address[25];
 
-	unsigned char address[25];
+    address[0] = 0x00;
 
-	address[0] = 0x00;
+    GetHash160(compressed, pubKey, address + 1);
 
-	GetHash160(compressed, pubKey, address + 1);
-	sha256_checksum(address, 21, address + 21);
+    sha256_checksum(address, 21, address + 21);
 
-	// Base58
-	return EncodeBase58(address, address + 25);
-
+    std::string finalAddress = EncodeBase58(address, address + 25);
+    return finalAddress;
 }
 
 std::string Secp256K1::GetAddressETH(Point& pubKey)
