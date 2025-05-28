@@ -89,8 +89,8 @@ python3 eth_addresses_to_bin.py eth_addresses_in.txt eth_addresses_out.bin
 ## BinSort
 For hash160 and keccak160 ```length``` is ```20``` and for xpoint ```length``` is ```32```.
 ```
-BinSort.exe
-Usage: BinSort.exe length in_file out_file
+BinSort.exe or .\BinSort
+Usage: .\BinSort length in_file out_file
 ```
 
 ## KeyHunt-Cuda
@@ -535,7 +535,7 @@ BYE
  - To get info about various Nvidia GPU CCAP value see [this](https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/).
     ```sh
     $ cd KeyHunt-Cuda
-    $ make gpu=1 CCAP=75 all
+    $ make gpu=1 CCAP=120 all
     ```
 #### BinSort
 ```sh
