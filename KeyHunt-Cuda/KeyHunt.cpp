@@ -90,7 +90,7 @@ KeyHunt::KeyHunt(const std::string& inputFile, int compMode, int searchMode, int
 			bloom->add(buf, K_LENGTH);
 			memcpy(DATA + (i * K_LENGTH), buf, K_LENGTH);
 			if ((percent != 0) && i % percent == 0) {
-				printf("\rLoading      : %llu %%", (i / percent));
+				printf("\rLoading      : %lu %%", (i / percent));
 				fflush(stdout);
 			}
 		}
@@ -192,7 +192,7 @@ void KeyHunt::InitGenratorTable()
 	printf("Start Time   : %s", ctimeBuff);
 
 	if (rKey > 0) {
-		printf("Base Key     : Randomly changes on every %llu Mkeys\n", rKey);
+		printf("Base Key     : Randomly changes on every %lu Mkeys\n", rKey);
 	}
 	printf("Global start : %s (%d bit)\n", this->rangeStart.GetBase16().c_str(), this->rangeStart.GetBitLength());
 	printf("Global end   : %s (%d bit)\n", this->rangeEnd.GetBase16().c_str(), this->rangeEnd.GetBitLength());
@@ -564,22 +564,24 @@ void KeyHunt::checkSingleAddressesSSE(bool compressed, Int key, int i, Point p1,
 
 void KeyHunt::getCPUStartingKey(Int & tRangeStart, Int & tRangeEnd, Int & key, Point & startP)
 {
-	if (rKey <= 0) {
-		key.Set(&tRangeStart);
-	}
-	else {
-		Int rangeDiff;
-        	rangeDiff.Set(&tRangeEnd);
-        	rangeDiff.Sub(&tRangeStart);
-        	Int randomOffset;
-        	randomOffset.Rand(&rangeDiff);
-        	key.Set(&tRangeStart);
-        	key.Add(&randomOffset);
-	}
-	Int km(&key);
-	km.Add((uint64_t)CPU_GRP_SIZE / 2);
-	startP = secp->ComputePublicKey(&km);
-
+    if (rKey <= 0) {
+        key.Set(&tRangeStart);
+        printf("Linear mode: Starting key %s\n", key.GetBase16().c_str());
+    }
+    else {
+        Int rangeDiff;
+        rangeDiff.Set(&tRangeEnd);
+        rangeDiff.Sub(&tRangeStart);
+        Int randomOffset;
+        randomOffset.Rand(&rangeDiff);
+        key.Set(&tRangeStart);
+        key.Add(&randomOffset);
+        printf("Random mode: Jump #%lu, Generated key %s (range %s to %s)\n", lastrKey / (1000000 * rKey) + 1,
+               key.GetBase16().c_str(), tRangeStart.GetBase16().c_str(), tRangeEnd.GetBase16().c_str());
+    }
+    Int km(&key);
+    km.Add((uint64_t)CPU_GRP_SIZE / 2);
+    startP = secp->ComputePublicKey(&km);
 }
 
 // ----------------------------------------------------------------------------
@@ -1243,15 +1245,9 @@ void KeyHunt::Search(int nbThread, std::vector<int> gpuId, std::vector<int> grid
 
 		if (isAlive(params)) {
 			memset(timeStr, '\0', 256);
-			printf("\r[%s] [CPU+GPU: %.2f Mk/s] [GPU: %.2f Mk/s] [C: %lf %%] [R: %llu] [T: %s (%d bit)] [F: %d]  ",
-				toTimeStr(t1, timeStr),
-				avgKeyRate / 1000000.0,
-				avgGpuKeyRate / 1000000.0,
-				completedPerc,
-				rKeyCount,
-				formatThousands(count).c_str(),
-				completedBits,
-				nbFoundKey);
+			printf("\r[%s] [CPU+GPU: %.2f Mk/s] [GPU: %.2f Mk/s] [C: %.3f%%] [R: %lu] [T: %s (%d bit)] [F: %d]  ",
+               toTimeStr(t1, timeStr), avgKeyRate / 1000000.0, avgGpuKeyRate / 1000000.0,
+               completedPerc, rKeyCount, formatThousands(count).c_str(), completedBits, nbFoundKey);
 		}
 		if (rKey > 0) {
 			if ((count - lastrKey) > (1000000 * rKey)) {
@@ -1365,7 +1361,7 @@ std::string KeyHunt::formatThousands(uint64_t x)
 {
 	char buf[32] = "";
 
-	sprintf(buf, "%llu", x);
+	sprintf(buf, "%lu", x);
 
 	std::string s(buf);
 
@@ -1420,7 +1416,3 @@ char* KeyHunt::toTimeStr(int sec, char* timeStr)
 //	//y = y / mpf_class(r);
 //	return 0;// y.get_d();
 //}
-
-
-
-
