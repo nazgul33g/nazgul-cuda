@@ -852,37 +852,54 @@ void KeyHunt::FindKeyCPU(TH_PARAM * ph)
 
 void KeyHunt::getGPUStartingKeys(Int & tRangeStart, Int & tRangeEnd, int groupSize, int nbThread, Int * keys, Point * p)
 {
+    Int tRangeDiff(tRangeEnd);
+    tRangeDiff.Sub(&tRangeStart); // Full range difference
 
-	Int tRangeDiff(tRangeEnd);
-	Int tRangeStart2(tRangeStart);
-	Int tRangeEnd2(tRangeStart);
+    Int tRangeStart2(tRangeStart);
+    Int tRangeEnd2;
 
-	Int tThreads;
-	tThreads.SetInt32(nbThread);
-	tRangeDiff.Set(&tRangeEnd);
-	tRangeDiff.Sub(&tRangeStart);
-	tRangeDiff.Div(&tThreads);
+    if (rKey <= 0) {
+        // Linear mode: Divide range among threads
+        Int tThreads;
+        tThreads.SetInt32(nbThread);
+        tRangeDiff.Div(&tThreads); // Sub-range size per thread
 
-	int rangeShowThreasold = 3;
-	int rangeShowCounter = 0;
+        for (int i = 0; i < nbThread; i++) {
+            tRangeEnd2.Set(&tRangeStart2);
+            tRangeEnd2.Add(&tRangeDiff);
 
-	for (int i = 0; i < nbThread; i++) {
+            keys[i].Set(&tRangeStart2);
+            if (i < 10) { // Log only first 10 threads
+                printf("GPU Thread %d: Linear mode: Starting key %s (range %s to %s)\n",
+                       i, keys[i].GetBase16().c_str(),
+                       tRangeStart2.GetBase16().c_str(), tRangeEnd2.GetBase16().c_str());
+            }
 
-		tRangeEnd2.Set(&tRangeStart2);
-		tRangeEnd2.Add(&tRangeDiff);
+            tRangeStart2.Add(&tRangeDiff);
 
-		if (rKey <= 0)
-			keys[i].Set(&tRangeStart2);
-		else
-			keys[i].Rand(&tRangeEnd2);
+            Int k(keys[i]);
+            k.Add((uint64_t)(groupSize / 2));
+            p[i] = secp->ComputePublicKey(&k);
+        }
+    }
+    else {
+        // Random mode: Generate random keys across entire range
+        for (int i = 0; i < nbThread; i++) {
+            Int randomOffset;
+            randomOffset.Rand(&tRangeDiff); // Random offset within full range
+            keys[i].Set(&tRangeStart); // Start from range start
+            keys[i].Add(&randomOffset); // Add random offset
+            if (i < 10) { // Log only first 10 threads
+                printf("GPU Thread %d: Random mode: Jump #%lu, Generated key %s (range %s to %s)\n",
+                       i, lastrKey / (1000000 * rKey) + 1, keys[i].GetBase16().c_str(),
+                       tRangeStart.GetBase16().c_str(), tRangeEnd.GetBase16().c_str());
+            }
 
-		tRangeStart2.Add(&tRangeDiff);
-
-		Int k(keys + i);
-		k.Add((uint64_t)(groupSize / 2));	// Starting key is at the middle of the group
-		p[i] = secp->ComputePublicKey(&k);
-	}
-
+            Int k(keys[i]);
+            k.Add((uint64_t)(groupSize / 2));
+            p[i] = secp->ComputePublicKey(&k);
+        }
+    }
 }
 
 void KeyHunt::FindKeyGPU(TH_PARAM * ph)
