@@ -251,22 +251,22 @@ void KeyHunt::output(std::string addr, std::string pAddr, std::string pAddrHex, 
 		printf("\n");
 
 	fprintf(f, "PubAddress: %s\n", addr.c_str());
-	//fprintf(stdout, "\n=================================================================================\n");
+	fprintf(stdout, "\n=================================================================================\n");
 	fprintf(stdout, "PubAddress: %s\n", addr.c_str());
 
 	if (coinType == COIN_BTC) {
-		//fprintf(f, "Priv (WIF): p2pkh:%s\n", pAddr.c_str());
-		//fprintf(stdout, "Priv (WIF): p2pkh:%s\n", pAddr.c_str());
+		fprintf(f, "Priv (WIF): p2pkh:%s\n", pAddr.c_str());
+		fprintf(stdout, "Priv (WIF): p2pkh:%s\n", pAddr.c_str());
 	}
 
-	//fprintf(f, "Priv (HEX): %s\n", pAddrHex.c_str());
-	//fprintf(stdout, "Priv (HEX): %s\n", pAddrHex.c_str());
+	fprintf(f, "Priv (HEX): %s\n", pAddrHex.c_str());
+	fprintf(stdout, "Priv (HEX): %s\n", pAddrHex.c_str());
 
-	//fprintf(f, "PubK (HEX): %s\n", pubKey.c_str());
-	//fprintf(stdout, "PubK (HEX): %s\n", pubKey.c_str());
+	fprintf(f, "PubK (HEX): %s\n", pubKey.c_str());
+	fprintf(stdout, "PubK (HEX): %s\n", pubKey.c_str());
 
-	//fprintf(f, "=================================================================================\n");
-	//fprintf(stdout, "=================================================================================\n");
+	fprintf(f, "=================================================================================\n");
+	fprintf(stdout, "=================================================================================\n");
 
 	if (needToClose)
 		fclose(f);
@@ -568,7 +568,13 @@ void KeyHunt::getCPUStartingKey(Int & tRangeStart, Int & tRangeEnd, Int & key, P
 		key.Set(&tRangeStart);
 	}
 	else {
-		key.Rand(&tRangeEnd);
+		Int rangeDiff;
+        	rangeDiff.Set(&tRangeEnd);
+        	rangeDiff.Sub(&tRangeStart);
+        	Int randomOffset;
+        	randomOffset.Rand(&rangeDiff);
+        	key.Set(&tRangeStart);
+        	key.Add(&randomOffset);
 	}
 	Int km(&key);
 	km.Add((uint64_t)CPU_GRP_SIZE / 2);
