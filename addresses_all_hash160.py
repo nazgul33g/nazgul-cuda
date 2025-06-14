@@ -14,8 +14,18 @@ def bech32_to_hash160(address):
         raise ValueError("Invalid bech32 address")
     version = data[0]
     program = convertbits(data[1:], 5, 8, False)
-    if version == 0 and len(program) == 20:
+    if program is None:
+        raise ValueError("Invalid bech32 conversion")
+    
+    # Handle common witness versions
+    if version == 0 and len(program) == 20:  # P2WPKH
         return bytes(program)
+    elif version == 0 and len(program) == 32:  # P2WSH
+        return hashlib.new('ripemd160', hashlib.sha256(bytes(program)).digest()).digest()
+    elif version == 1 and len(program) == 32:  # Taproot
+        # Use SHA256(pubkey) for matching against Taproot addresses
+        return hashlib.new('ripemd160', hashlib.sha256(bytes(program)).digest()).digest()
+    
     raise ValueError("Unsupported witness version or length")
 
 def base58_to_hash160(address):
