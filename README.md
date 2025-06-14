@@ -1,4 +1,4 @@
-# KeyHunt-Cuda 
+# Nazgul-KeyHunt-Cuda 
 _Hunt for Bitcoin private keys._
 
 This is a modified version of VanitySearch by [JeanLucPons](https://github.com/JeanLucPons/VanitySearch/).
