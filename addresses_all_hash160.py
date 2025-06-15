@@ -2,45 +2,47 @@
 
 import base58
 import hashlib
-from bech32 import bech32_decode, convertbits
 import sys
+import segwit_addr  # Make sure segwit_addr.py is in same folder
 
 def hash160(data):
     return hashlib.new('ripemd160', hashlib.sha256(data).digest()).digest()
 
-def bech32_to_hash160(address):
-    hrp, data = bech32_decode(address)
-    if data is None or len(data) < 1:
-        raise ValueError("Invalid bech32 address")
-    version = data[0]
-    program = convertbits(data[1:], 5, 8, False)
-    if program is None:
-        raise ValueError("Invalid bech32 conversion")
-    
-    # Handle common witness versions
-    if version == 0 and len(program) == 20:  # P2WPKH
-        return bytes(program)
-    elif version == 0 and len(program) == 32:  # P2WSH
-        return hashlib.new('ripemd160', hashlib.sha256(bytes(program)).digest()).digest()
-    elif version == 1 and len(program) == 32:  # Taproot
-        # Use SHA256(pubkey) for matching against Taproot addresses
-        return hashlib.new('ripemd160', hashlib.sha256(bytes(program)).digest()).digest()
-    
-    raise ValueError("Unsupported witness version or length")
+def decode_bech32(address):
+    """Return witness_version, witness_program, encoding"""
+    hrp = 'bc'  # adjust for testnet if needed
+    try:
+        witver, witprog = segwit_addr.decode(hrp, address)
+        if witver is None:
+            raise ValueError("Invalid Bech32 checksum or format")
+        return witver, bytes(witprog)
+    except Exception as e:
+        raise ValueError(f"Bech32 decode error: {e}")
 
 def base58_to_hash160(address):
     decoded = base58.b58decode_check(address)
-    if decoded[0] in [0x00, 0x05]:  # P2PKH or P2SH
+    prefix = decoded[0]
+    if prefix in (0x00, 0x05):  # P2PKH, P2SH
         return decoded[1:]
-    raise ValueError("Unsupported base58 prefix")
+    raise ValueError(f"Unsupported Base58 prefix: {prefix}")
 
 def main(input_file, output_file):
     with open(input_file, "r") as f_in, open(output_file, "wb") as f_out:
         for line in f_in:
             addr = line.strip()
+            if not addr:
+                continue
             try:
                 if addr.startswith("bc1"):
-                    h160 = bech32_to_hash160(addr)
+                    witver, prog = decode_bech32(addr)
+                    if witver == 0 and len(prog) == 20:  # P2WPKH
+                        h160 = prog
+                    elif witver == 0 and len(prog) == 32:  # P2WSH
+                        h160 = hash160(prog)
+                    elif witver == 1 and len(prog) == 32:  # Taproot
+                        h160 = prog  # store raw 32 bytes
+                    else:
+                        raise ValueError(f"Unsupported witness version {witver} or length {len(prog)}")
                 else:
                     h160 = base58_to_hash160(addr)
                 f_out.write(h160)
