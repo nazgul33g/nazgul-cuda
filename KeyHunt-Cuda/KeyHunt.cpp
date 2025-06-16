@@ -275,7 +275,6 @@ void KeyHunt::output(std::string addr, std::string pAddr, std::string pAddrHex, 
 
     if (needToClose)
         fclose(f);
-}
 
 #ifdef WIN64
 	ReleaseMutex(ghMutex);
