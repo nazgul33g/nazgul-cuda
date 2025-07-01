@@ -14,7 +14,7 @@ OBJDIR = obj
 
 OBJET = $(addprefix $(OBJDIR)/, $(SRC:.cpp=.o) GPU/GPUEngine.o)
 
-CXX        = g++9
+CXX        = g++-9
 CUDA       = /usr/local/cuda-12.8
 CXXCUDA    = $(CUDA)/bin/nvcc
 NVCC       = $(CUDA)/bin/nvcc
